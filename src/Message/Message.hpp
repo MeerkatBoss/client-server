@@ -56,6 +56,14 @@ public:
       size_t send_count
   );
 
+  static std::optional<Message> fromBytes(
+      std::span<const std::byte> bytes,
+      size_t& need_bytes
+  );
+
+  std::span<const std::byte> getBytes(void) const;
+
+
   Message() = delete;
 
   Type getType(void) const noexcept;
