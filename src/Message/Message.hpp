@@ -32,6 +32,16 @@ public:
     CommentsResponse  // Dynamic payload (CommentsResponsePayload)
   };
 
+private:
+  struct MessageHeader {
+    char magic[3];
+    Type type;
+    uint32_t payload_size;
+  } __attribute__((packed));
+
+public:
+  static constexpr size_t MinSize = sizeof(MessageHeader);
+
   // Non-Copyable
   Message(const Message&) = delete;
   Message& operator=(const Message&) = delete;
@@ -58,11 +68,10 @@ public:
 
   static std::optional<Message> fromBytes(
       std::span<const std::byte> bytes,
-      size_t& need_bytes
+      size_t& message_size
   );
 
   std::span<const std::byte> getBytes(void) const;
-
 
   Message() = delete;
 
@@ -76,12 +85,6 @@ public:
   }
 
 private:
-  struct MessageHeader {
-    char magic[3];
-    Type type;
-    uint32_t payload_size;
-  } __attribute__((packed));
-
   struct NewCommentPayload {
     char comment[];
   };
