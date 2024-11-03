@@ -13,6 +13,7 @@
 #define __MESSAGE_SEND_COMMENTS_MESSAGE_HPP
 
 #include "Message/Message.hpp"
+#include <netinet/in.h>
 #include <optional>
 #include <vector>
 
@@ -20,7 +21,12 @@ namespace message {
 
 class SendCommentsMessage final {
 public:
-  static std::optional<SendCommentsMessage> fromMessage(Message&& message);
+  static std::optional<SendCommentsMessage> fromMessage(Message&& message) {
+    if (message.getType() == Message::Type::CommentsRequest) {
+      return SendCommentsMessage(std::move(message));
+    }
+    return std::nullopt;
+  }
 
   // Non-Copyable
   SendCommentsMessage(const SendCommentsMessage&) = delete;
@@ -30,15 +36,27 @@ public:
   SendCommentsMessage(SendCommentsMessage&&) noexcept = default;
   SendCommentsMessage& operator=(SendCommentsMessage&&) noexcept = default;
 
-  size_t getCount(void) const;
+  size_t getCount(void) const {
+    return m_comments.size();
+  }
 
-  std::span<const unsigned char> operator[](size_t index) const;
+  size_t getTotal(void) const {
+    const auto* payload = 
+      reinterpret_cast<const Message::CommentsResponsePayload*> (
+          m_message.m_payload->payload
+      );
+    return ntohl(payload->total_comments);
+  }
+
+  std::span<const char> operator[](size_t index) const {
+    return m_comments[index];
+  }
 
 private:
   explicit SendCommentsMessage(Message&& message);
 
   Message m_message;
-  std::vector<std::span<const unsigned char>> comments;
+  std::vector<std::span<const char>> m_comments;
 };
 
 } // namespace message

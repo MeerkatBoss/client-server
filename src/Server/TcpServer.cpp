@@ -135,6 +135,10 @@ static void serve_client(int socket, std::vector<std::string>& comments) {
       continue;
     }
 
+    read_size = message::Message::MinSize;
+    offset = 0;
+    buffer.assign(read_size, std::byte{});
+
     auto message(std::move(*msg));
 
     using Type = message::Message::Type;

@@ -12,6 +12,7 @@
 #ifndef __MESSAGE_NEW_COMMENT_MESSAGE_HPP
 #define __MESSAGE_NEW_COMMENT_MESSAGE_HPP
 
+#include <netinet/in.h>
 #include <optional>
 #include <span>
 
@@ -21,7 +22,12 @@ namespace message {
 
 class NewCommentMessage final {
 public:
-  static std::optional<NewCommentMessage> fromMessage(Message&& message);
+  static std::optional<NewCommentMessage> fromMessage(Message&& message) {
+    if (message.getType() == Message::Type::NewComment) {
+      return NewCommentMessage(std::move(message));
+    }
+    return std::nullopt;
+  }
 
   // Non-Copyable
   NewCommentMessage(const NewCommentMessage&) = delete;
@@ -31,9 +37,18 @@ public:
   NewCommentMessage(NewCommentMessage&&) noexcept = default;
   NewCommentMessage& operator=(NewCommentMessage&&) noexcept = default;
 
-  std::span<const char> getComment(void) const;
+  std::span<const char> getComment(void) const {
+    const char* payload = 
+      reinterpret_cast<const char*> (
+          m_message.m_payload->payload
+      );
+    size_t size = ntohl(m_message.m_header.payload_size);
+    return std::span(payload, size);
+  }
 private:
-  explicit NewCommentMessage(std::span<std::byte> bytes);
+  explicit NewCommentMessage(Message&& message)
+    : m_message(std::move(message)) {
+  }
 
   Message m_message;
 };

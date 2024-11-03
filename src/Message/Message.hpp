@@ -21,23 +21,31 @@
 
 namespace message {
 
+class NewCommentMessage;
+class GetCommentsMessage;
+class SendCommentsMessage;
+
 class Message final {
+  friend class NewCommentMessage;
+  friend class GetCommentsMessage;
+  friend class SendCommentsMessage;
+
 public:
   enum class Type : uint8_t {
     Hello,            // No payload
     Goodbye,          // No payload
-    NewComment,       // Dynamic payload (NewCommentPayload)
+    NewComment,       // Dynamic payload (chars)
     CommentsRequest,  // Dynamic payload (CommentsRequestPayload)
     CommentOk,        // No payload
     CommentsResponse  // Dynamic payload (CommentsResponsePayload)
   };
 
 private:
-  struct MessageHeader {
+  struct alignas(uint32_t) MessageHeader {
     char magic[3];
     Type type;
     uint32_t payload_size;
-  } __attribute__((packed));
+  };
 
 public:
   static constexpr size_t MinSize = sizeof(MessageHeader);
@@ -75,7 +83,7 @@ public:
 
   Message() = delete;
 
-  Type getType(void) const noexcept;
+  Type getType(void) const noexcept { return m_header.type; }
 
   ~Message() {
     if (m_payload != nullptr) {
@@ -85,10 +93,6 @@ public:
   }
 
 private:
-  struct NewCommentPayload {
-    char comment[];
-  };
-
   struct CommentsRequestPayload {
     uint32_t start_index;
   };
@@ -104,6 +108,7 @@ private:
     MessageHeader header;
     std::byte payload[];
   };
+  static_assert(sizeof(DynamicMessage) == sizeof(MessageHeader));
 
   explicit Message(const MessageHeader& header)
     : m_header(header), m_payload(nullptr) {
@@ -132,6 +137,8 @@ private:
       const MessageHeader& header,
       std::span<std::byte> bytes
   );
+
+  static DynamicMessage* allocateDynamic(Type type, size_t alloc_size);
 
   MessageHeader m_header;
   DynamicMessage* m_payload = NULL;
